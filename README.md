@@ -63,6 +63,28 @@ function ReviewPanel({ content }: { content: string }) {
 
 추가된 단어는 파란 톤(`bg-blue-100`), 삭제된 단어는 분홍 톤(`bg-rose-50`)에 취소선으로 표시된다.
 
+### 양방향 협업 (편집 ↔ 컨펌)
+
+A 측이 수정해서 B 측에 보내고, B 가 다시 수정해서 A 에 보내는 ping-pong 흐름:
+
+```ts
+import { extractAfter, generateTagged } from '@depart-os/text-diff'
+
+// 받았을 때 — textarea 초기값은 직전 상대 시안의 plain
+function startEditing(serverContent: string) {
+  return extractAfter(serverContent)
+}
+
+// 보낼 때 — 새 tagged = 직전 상대 시안 vs 내 새 시안
+async function submitMyEdit(serverContent: string, myDraft: string) {
+  const baseline = extractAfter(serverContent)
+  const newTagged = generateTagged(baseline, myDraft)
+  await api.put('/...', { content: newTagged })
+}
+```
+
+서버는 매번 새 tagged 로 덮어씀. DB 컬럼 1개로 무한 라운드 가능. `extractAfter` 가 plain 도 그대로 통과시키므로 기존 plain 데이터와도 자동 호환.
+
 ### Plain text 호환
 
 태그 없는 plain text 를 넘기면 모든 모드에서 그대로 렌더된다 (변경 표시 없음). 기존 데이터와 신규 데이터를 한 컬럼에 섞어 보관해도 안전하다.
@@ -96,6 +118,26 @@ export default {
 ### `generateTagged(before: string, after: string): string`
 
 LCS 기반 워드 단위 diff 를 계산하고 `<del>`/`<ins>` 태그로 직렬화한 단일 string 을 반환. 한글/영문/공백/구두점을 각각의 토큰으로 분리.
+
+### `extractBefore(content: string): string`
+
+tagged string 에서 "직전 baseline" plain text 를 추출. `<ins>` 블록은 제거하고 `<del>` 내용만 살림. plain text 입력은 no-op 으로 그대로 반환.
+
+```ts
+extractBefore('신호<del>일 수 있어요</del><ins>입니다</ins>')
+// → '신호일 수 있어요'
+```
+
+### `extractAfter(content: string): string`
+
+tagged string 에서 "최신 시안" plain text 를 추출. `<del>` 블록은 제거하고 `<ins>` 내용만 살림. plain text 입력은 no-op 으로 그대로 반환.
+
+```ts
+extractAfter('신호<del>일 수 있어요</del><ins>입니다</ins>')
+// → '신호입니다'
+```
+
+라운드트립 보장: `extractBefore(generateTagged(a, b)) === a` && `extractAfter(generateTagged(a, b)) === b`.
 
 ### `<WordDiff content mode className? />`
 

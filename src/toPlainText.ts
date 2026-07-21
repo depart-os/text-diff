@@ -1,0 +1,14 @@
+import { extractAfter } from "./extract";
+import { decodeEntities } from "./escape";
+
+const FORMAT_TAG = /<\/?(?:strong|b|em|i|u)>/gi;
+
+/**
+ * 저장 문자열(diff 태그·서식 태그 포함 가능)에서 순수 평문을 추출한다.
+ * 업로드·클립보드 복사 등 태그가 절대 섞이면 안 되는 경로에서 사용.
+ * after(최신 시안) 기준으로 diff를 해소하고 서식 태그를 제거한 뒤
+ * 이스케이프된 엔티티를 원문 문자로 복원한다.
+ */
+export function toPlainText(content: string): string {
+  return decodeEntities(extractAfter(content).replace(FORMAT_TAG, ""));
+}

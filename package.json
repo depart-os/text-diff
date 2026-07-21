@@ -14,7 +14,11 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
@@ -30,6 +34,7 @@
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "jsdom": "^29.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tsup": "^8.0.0",
@@ -45,5 +50,12 @@
   },
   "homepage": "https://github.com/depart-os/text-diff#readme",
   "bugs": "https://github.com/depart-os/text-diff/issues",
-  "keywords": ["diff", "text-diff", "word-diff", "react", "korean", "inline-tag"]
+  "keywords": [
+    "diff",
+    "text-diff",
+    "word-diff",
+    "react",
+    "korean",
+    "inline-tag"
+  ]
 }

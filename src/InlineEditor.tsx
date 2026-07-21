@@ -49,9 +49,12 @@ export function InlineEditor({
   marks = ["b", "i", "u"],
 }: InlineEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const composingRef = useRef(false);
   const [active, setActive] = useState<Record<Mark, boolean>>(NO_ACTIVE);
 
-  // 외부 value가 바뀌고 편집 포커스가 없을 때만 DOM 재동기화
+  // 초기 마운트 및 외부 value 변경 시에만 DOM 동기화.
+  // 편집(포커스) 중에는 DOM이 소스 오브 트루스 — React가 innerHTML을
+  // 다시 쓰면 IME 조합과 선택 영역이 깨지므로 절대 건드리지 않는다.
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
@@ -95,6 +98,18 @@ export function InlineEditor({
   };
 
   const handleInput = () => {
+    // 한글 등 IME 조합 중에는 onChange를 보류 — 조합 완료 시 반영
+    if (composingRef.current) return;
+    if (ref.current) onChange(domToTagged(ref.current));
+    syncActive();
+  };
+
+  const handleCompositionStart = () => {
+    composingRef.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    composingRef.current = false;
     if (ref.current) onChange(domToTagged(ref.current));
     syncActive();
   };
@@ -151,9 +166,10 @@ export function InlineEditor({
         className={editorClassName}
         data-placeholder={placeholder}
         onInput={handleInput}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         onBlur={syncActive}
         onPaste={handlePaste}
-        dangerouslySetInnerHTML={{ __html: taggedToHtml(value) }}
       />
     </div>
   );

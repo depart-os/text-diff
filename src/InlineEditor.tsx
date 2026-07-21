@@ -23,6 +23,8 @@ export interface InlineEditorProps {
   editorClassName?: string;
   placeholder?: string;
   marks?: Mark[];
+  /** true면 편집·툴바 비활성화 (내용은 계속 표시) */
+  disabled?: boolean;
 }
 
 const LABEL: Record<Mark, string> = { b: "굵게", i: "기울임", u: "밑줄" };
@@ -47,6 +49,7 @@ export function InlineEditor({
   editorClassName,
   placeholder,
   marks = ["b", "i", "u"],
+  disabled = false,
 }: InlineEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const composingRef = useRef(false);
@@ -151,6 +154,7 @@ export function InlineEditor({
               data-mark={m}
               data-active={isOn || undefined}
               aria-pressed={isOn}
+              disabled={disabled}
               className={cls}
               style={
                 isOn && !activeButtonClassName
@@ -171,8 +175,9 @@ export function InlineEditor({
       </div>
       <div
         ref={ref}
-        contentEditable
+        contentEditable={!disabled}
         suppressContentEditableWarning
+        aria-disabled={disabled || undefined}
         className={editorClassName}
         data-placeholder={placeholder}
         onInput={handleInput}

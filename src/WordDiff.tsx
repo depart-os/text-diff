@@ -1,58 +1,62 @@
-import { useMemo } from 'react'
-import { parseTagged } from './tags'
-import type { DiffPart } from './types'
+import { useMemo, type ReactNode } from "react";
+import { parseTaggedMarked, filterMarkedByMode } from "./renderParts";
+import { decodeEntities } from "./escape";
+import { MARK_ORDER } from "./marks";
+import type { MarkedPart } from "./types";
 
-export type WordDiffMode = 'before' | 'after' | 'diff'
+export type WordDiffMode = "before" | "after" | "diff";
 
 export interface WordDiffProps {
-  content: string
-  mode: WordDiffMode
-  className?: string
+  content: string;
+  mode: WordDiffMode;
+  className?: string;
 }
 
 const BASE_CLASS =
-  'whitespace-pre-wrap text-[14px] leading-[1.75] text-zinc-800'
-
-const ADD_CLASS = 'rounded-sm bg-blue-100 px-0.5 text-blue-900'
+  "whitespace-pre-wrap text-[14px] leading-[1.75] text-zinc-800";
+const ADD_CLASS = "rounded-sm bg-blue-100 px-0.5 text-blue-900";
 const DEL_CLASS =
-  'rounded-sm bg-rose-50 px-0.5 text-rose-500 line-through decoration-rose-400 decoration-1'
+  "rounded-sm bg-rose-50 px-0.5 text-rose-500 line-through decoration-rose-400 decoration-1";
 
-function filterByMode(parts: DiffPart[], mode: WordDiffMode): DiffPart[] {
-  if (mode === 'before') {
-    return parts
-      .filter((p) => p.type !== 'add')
-      .map((p) => (p.type === 'del' ? { type: 'eq', text: p.text } : p))
+const MARK_TAG: Record<string, "strong" | "em" | "u"> = {
+  b: "strong",
+  i: "em",
+  u: "u",
+};
+
+function withMarks(text: string, marks: string): ReactNode {
+  let node: ReactNode = decodeEntities(text);
+  for (const m of MARK_ORDER) {
+    if (marks.includes(m)) {
+      const Tag = MARK_TAG[m];
+      node = <Tag>{node}</Tag>;
+    }
   }
-  if (mode === 'after') {
-    return parts
-      .filter((p) => p.type !== 'del')
-      .map((p) => (p.type === 'add' ? { type: 'eq', text: p.text } : p))
-  }
-  return parts
+  return node;
+}
+
+function renderPart(p: MarkedPart, i: number): ReactNode {
+  const inner = withMarks(p.text, p.marks);
+  if (p.type === "add")
+    return (
+      <mark key={i} className={ADD_CLASS}>
+        {inner}
+      </mark>
+    );
+  if (p.type === "del")
+    return (
+      <span key={i} className={DEL_CLASS}>
+        {inner}
+      </span>
+    );
+  return <span key={i}>{inner}</span>;
 }
 
 export function WordDiff({ content, mode, className }: WordDiffProps) {
   const parts = useMemo(
-    () => filterByMode(parseTagged(content), mode),
+    () => filterMarkedByMode(parseTaggedMarked(content), mode),
     [content, mode],
-  )
-  const finalClass = className ? `${BASE_CLASS} ${className}` : BASE_CLASS
-  return (
-    <p className={finalClass}>
-      {parts.map((p, i) => {
-        if (p.type === 'eq') return <span key={i}>{p.text}</span>
-        if (p.type === 'add')
-          return (
-            <mark key={i} className={ADD_CLASS}>
-              {p.text}
-            </mark>
-          )
-        return (
-          <span key={i} className={DEL_CLASS}>
-            {p.text}
-          </span>
-        )
-      })}
-    </p>
-  )
+  );
+  const finalClass = className ? `${BASE_CLASS} ${className}` : BASE_CLASS;
+  return <p className={finalClass}>{parts.map(renderPart)}</p>;
 }

@@ -27,19 +27,19 @@ pnpm add @depart-os/text-diff
 ### 빌더 측 — 수정 전송 시 태그 string 생성
 
 ```ts
-import { generateTagged } from '@depart-os/text-diff'
+import { generateTagged } from "@depart-os/text-diff";
 
 async function submitEdit(originalContent: string, newContent: string) {
-  const tagged = generateTagged(originalContent, newContent)
+  const tagged = generateTagged(originalContent, newContent);
   // tagged === "신호<del>일 수 있어요</del><ins>입니다</ins>"
-  await api.put('/captions/123', { content: tagged })
+  await api.put("/captions/123", { content: tagged });
 }
 ```
 
 ### 받는 쪽 — 모드별 렌더
 
 ```tsx
-import { WordDiff } from '@depart-os/text-diff'
+import { WordDiff } from "@depart-os/text-diff";
 
 function ReviewPanel({ content }: { content: string }) {
   return (
@@ -57,7 +57,7 @@ function ReviewPanel({ content }: { content: string }) {
         <WordDiff content={content} mode="before" />
       </section>
     </>
-  )
+  );
 }
 ```
 
@@ -68,18 +68,18 @@ function ReviewPanel({ content }: { content: string }) {
 A 측이 수정해서 B 측에 보내고, B 가 다시 수정해서 A 에 보내는 ping-pong 흐름:
 
 ```ts
-import { extractAfter, generateTagged } from '@depart-os/text-diff'
+import { extractAfter, generateTagged } from "@depart-os/text-diff";
 
 // 받았을 때 — textarea 초기값은 직전 상대 시안의 plain
 function startEditing(serverContent: string) {
-  return extractAfter(serverContent)
+  return extractAfter(serverContent);
 }
 
 // 보낼 때 — 새 tagged = 직전 상대 시안 vs 내 새 시안
 async function submitMyEdit(serverContent: string, myDraft: string) {
-  const baseline = extractAfter(serverContent)
-  const newTagged = generateTagged(baseline, myDraft)
-  await api.put('/...', { content: newTagged })
+  const baseline = extractAfter(serverContent);
+  const newTagged = generateTagged(baseline, myDraft);
+  await api.put("/...", { content: newTagged });
 }
 ```
 
@@ -96,7 +96,7 @@ async function submitMyEdit(serverContent: string, myDraft: string) {
 **Tailwind v4 (CSS-first)** — `globals.css` 에서:
 
 ```css
-@import 'tailwindcss';
+@import "tailwindcss";
 @source '../../node_modules/@depart-os/text-diff/dist';
 ```
 
@@ -107,10 +107,10 @@ async function submitMyEdit(serverContent: string, myDraft: string) {
 ```js
 export default {
   content: [
-    './src/**/*.{ts,tsx}',
-    './node_modules/@depart-os/text-diff/dist/**/*.{js,mjs,cjs}',
+    "./src/**/*.{ts,tsx}",
+    "./node_modules/@depart-os/text-diff/dist/**/*.{js,mjs,cjs}",
   ],
-}
+};
 ```
 
 ## API
@@ -124,7 +124,7 @@ LCS 기반 워드 단위 diff 를 계산하고 `<del>`/`<ins>` 태그로 직렬�
 tagged string 에서 "직전 baseline" plain text 를 추출. `<ins>` 블록은 제거하고 `<del>` 내용만 살림. plain text 입력은 no-op 으로 그대로 반환.
 
 ```ts
-extractBefore('신호<del>일 수 있어요</del><ins>입니다</ins>')
+extractBefore("신호<del>일 수 있어요</del><ins>입니다</ins>");
 // → '신호일 수 있어요'
 ```
 
@@ -133,7 +133,7 @@ extractBefore('신호<del>일 수 있어요</del><ins>입니다</ins>')
 tagged string 에서 "최신 시안" plain text 를 추출. `<del>` 블록은 제거하고 `<ins>` 내용만 살림. plain text 입력은 no-op 으로 그대로 반환.
 
 ```ts
-extractAfter('신호<del>일 수 있어요</del><ins>입니다</ins>')
+extractAfter("신호<del>일 수 있어요</del><ins>입니다</ins>");
 // → '신호입니다'
 ```
 
@@ -143,13 +143,45 @@ extractAfter('신호<del>일 수 있어요</del><ins>입니다</ins>')
 
 태그 문자열을 파싱해서 mode 별로 렌더.
 
-| mode | 동작 |
-|------|------|
-| `'diff'` | `<del>` 분홍+취소선, `<ins>` 파란 강조, eq 일반 |
-| `'after'` | `<del>` 제외, `<ins>` 내용만 살림 → 수정 후 평문처럼 보임 |
+| mode       | 동작                                                      |
+| ---------- | --------------------------------------------------------- |
+| `'diff'`   | `<del>` 분홍+취소선, `<ins>` 파란 강조, eq 일반           |
+| `'after'`  | `<del>` 제외, `<ins>` 내용만 살림 → 수정 후 평문처럼 보임 |
 | `'before'` | `<ins>` 제외, `<del>` 내용만 살림 → 수정 전 평문처럼 보임 |
 
 `className` 은 컨테이너 `<p>` 에 추가된다.
+
+## 인라인 서식 (굵게·기울임·밑줄)
+
+v0.3.0 부터 인라인 서식 3종을 diff 와 공존시켜 저장·렌더할 수 있다.
+
+- 서식은 `<strong>`/`<em>`/`<u>` 태그로 문자열에 저장된다.
+- 중첩 규칙: diff 태그(`<del>`/`<ins>`)가 바깥, 서식 태그가 안쪽. 예: `<ins><strong>x</strong></ins>`
+- 서식만 바뀐 단어도 변경으로 취급되어 `<del>`(이전 서식) + `<ins>`(새 서식)으로 표시된다.
+- 서식 태그가 없는 문자열은 v0.2.0 과 완전히 동일하게 동작한다 (마이그레이션 불필요).
+- 태그 외 텍스트의 `& < >` 는 HTML 엔티티로 이스케이프되어 저장되고, 렌더 시 안전하게 복원된다.
+
+```tsx
+import { InlineEditor, WordDiff } from '@depart-os/text-diff'
+
+// 편집: contentEditable + 굵게·기울임·밑줄 툴바
+<InlineEditor value={value} onChange={setValue} />
+
+// 표시: 서식이 diff 하이라이트 안에 중첩 렌더됨
+<WordDiff content={saved} mode="diff" />
+```
+
+### `<InlineEditor value onChange className? placeholder? marks? />`
+
+`contentEditable` 기반 인라인 에디터. 툴바 버튼(굵게·기울임·밑줄)으로 서식을 토글하고, `onChange` 로 정규화된 태그 문자열을 돌려준다. 붙여넣기는 평문으로만 삽입된다. `marks` 로 노출할 버튼을 제한할 수 있다 (기본 `['b','i','u']`).
+
+### `domToTagged(root: HTMLElement): string`
+
+편집 영역 DOM 을 정규 태그 문자열로 직렬화. `<b>`/`<i>`/인라인 스타일(bold·italic·underline)을 `<strong>`/`<em>`/`<u>` 로 정규화하고 텍스트를 이스케이프한다.
+
+### `taggedToHtml(content: string): string`
+
+저장 문자열(잔여 `<del>`/`<ins>` 포함 가능)을 after 기준의 편집용 innerHTML 로 변환.
 
 ## Sanitization
 

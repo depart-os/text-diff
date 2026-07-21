@@ -92,7 +92,17 @@ export function InlineEditor({
     } catch {
       /* noop */
     }
+    const sel = window.getSelection();
+    const hadRange = !!sel && !sel.isCollapsed;
     document.execCommand(CMD[m]);
+    // 영역 선택에 서식을 적용한 경우: 커서를 영역 끝으로 옮기고 서식을 꺼서
+    // 이어지는 타이핑이 서식 없이 입력되게 한다. (커서만 둔 토글은 기존 유지)
+    if (hadRange && sel) {
+      sel.collapseToEnd();
+      if (document.queryCommandState(CMD[m])) {
+        document.execCommand(CMD[m]);
+      }
+    }
     if (ref.current) onChange(domToTagged(ref.current));
     syncActive();
   };

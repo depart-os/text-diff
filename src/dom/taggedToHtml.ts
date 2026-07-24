@@ -16,7 +16,7 @@ export function taggedToHtml(content: string): string {
       .filter((m) => p.marks.includes(m))
       .map((m) => CLOSE[m])
       .join("");
-    out += open + p.text + close;
+    out += open + p.text.replace(/\n/g, "<br>") + close;
   }
   return out;
 }

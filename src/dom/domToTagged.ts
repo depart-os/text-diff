@@ -4,6 +4,15 @@ function isBold(s: CSSStyleDeclaration): boolean {
   return s.fontWeight === "bold" || Number(s.fontWeight) >= 600;
 }
 
+const BLOCK_TAG = /^(?:div|p)$/;
+
+function isBlock(node: Node): boolean {
+  return (
+    node.nodeType === Node.ELEMENT_NODE &&
+    BLOCK_TAG.test((node as HTMLElement).tagName.toLowerCase())
+  );
+}
+
 function serializeChildren(node: Node): string {
   let out = "";
   node.childNodes.forEach((child) => {
@@ -15,7 +24,16 @@ function serializeChildren(node: Node): string {
     const eln = child as HTMLElement;
     const tag = eln.tagName.toLowerCase();
     if (tag === "br") {
+      // 블록 마지막의 br은 브라우저가 넣는 자리표시자(빈 줄·줄 끝 패딩) —
+      // 줄바꿈은 블록 경계가 담당하므로 건너뛴다.
+      if (isBlock(node) && !eln.nextSibling) return;
       out += "\n";
+      return;
+    }
+    if (BLOCK_TAG.test(tag)) {
+      // contenteditable에서 Enter는 div/p 블록을 만든다 — 블록 시작 = 줄바꿈
+      if (out) out += "\n";
+      out += serializeChildren(eln);
       return;
     }
     const style = eln.style;

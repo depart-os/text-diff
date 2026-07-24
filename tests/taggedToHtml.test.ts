@@ -15,4 +15,15 @@ describe("taggedToHtml", () => {
   it("keeps escaped entities intact", () => {
     expect(taggedToHtml("5 &lt; 10")).toBe("5 &lt; 10");
   });
+  it("converts newlines to <br> for the editor", () => {
+    expect(taggedToHtml("line1\nline2")).toBe("line1<br>line2");
+  });
+  it("keeps empty lines as double <br>", () => {
+    expect(taggedToHtml("line1\n\nline2")).toBe("line1<br><br>line2");
+  });
+  it("converts newline inside marks", () => {
+    expect(taggedToHtml("<strong>a\nb</strong>")).toBe(
+      "<strong>a<br>b</strong>",
+    );
+  });
 });

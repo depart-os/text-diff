@@ -27,4 +27,25 @@ describe("domToTagged", () => {
       "a<strong>b</strong>",
     );
   });
+  it("converts <br> to newline", () => {
+    expect(domToTagged(el("line1<br>line2"))).toBe("line1\nline2");
+  });
+  it("records Enter-created div blocks as newlines (Chrome)", () => {
+    expect(domToTagged(el("line1<div>line2</div><div>line3</div>"))).toBe(
+      "line1\nline2\nline3",
+    );
+  });
+  it("records empty line (div with placeholder br)", () => {
+    expect(
+      domToTagged(el("line1<div><br></div><div>line2</div>")),
+    ).toBe("line1\n\nline2");
+  });
+  it("ignores trailing padding br inside a block", () => {
+    expect(domToTagged(el("<div>line1<br></div><div>line2</div>"))).toBe(
+      "line1\nline2",
+    );
+  });
+  it("records <p> blocks as newlines", () => {
+    expect(domToTagged(el("<p>line1</p><p>line2</p>"))).toBe("line1\nline2");
+  });
 });

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { extractAfter, extractBefore } from "../src/extract";
+import {
+  extractAfter,
+  extractBefore,
+  extractDraft,
+  hasDraft,
+  stripDraft,
+} from "../src/extract";
 import { generateTagged } from "../src/generateTagged";
 
 describe("extractBefore", () => {
@@ -104,3 +110,48 @@ describe("extract with nested formatting", () => {
     expect(extractAfter(eq)).toBe(eq);
   });
 });
+
+describe('draft(temp) 태그 해소', () => {
+  const draftOnly = '안녕<tmp-del>하세요</tmp-del><tmp-ins>하십니까</tmp-ins>'
+  const mixed = 'a<del>x</del><ins>b</ins><tmp-del>d</tmp-del><tmp-ins>c</tmp-ins>'
+
+  it('extractBefore는 draft를 미적용으로 취급한다', () => {
+    expect(extractBefore(draftOnly)).toBe('안녕하세요')
+  })
+
+  it('extractAfter도 draft를 미적용으로 취급한다', () => {
+    expect(extractAfter(draftOnly)).toBe('안녕하세요')
+  })
+
+  it('extractAfter는 확정 diff만 적용하고 draft는 무시한다', () => {
+    expect(extractAfter(mixed)).toBe('abd')
+  })
+
+  it('extractDraft는 확정 diff와 draft를 모두 적용한다', () => {
+    expect(extractDraft(mixed)).toBe('abc')
+    expect(extractDraft(draftOnly)).toBe('안녕하십니까')
+  })
+
+  it('extractDraft는 태그 없는 평문을 그대로 반환한다', () => {
+    expect(extractDraft('hello')).toBe('hello')
+  })
+
+  it('hasDraft는 tmp 태그 존재 여부를 반환한다', () => {
+    expect(hasDraft(draftOnly)).toBe(true)
+    expect(hasDraft('a<ins>b</ins>')).toBe(false)
+    expect(hasDraft('')).toBe(false)
+  })
+})
+
+describe('stripDraft', () => {
+  it('draft 파트만 제거하고 확정 diff는 보존한다', () => {
+    expect(
+      stripDraft('a<del>x</del><ins>b</ins><tmp-del>d</tmp-del><tmp-ins>c</tmp-ins>'),
+    ).toBe('a<del>x</del><ins>b</ins>d')
+  })
+
+  it('draft가 없으면 원문을 그대로 반환한다', () => {
+    const s = 'a<ins>b</ins>'
+    expect(stripDraft(s)).toBe(s)
+  })
+})

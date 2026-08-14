@@ -1,3 +1,4 @@
+// React 의존성이 없는 순수 함수 엔트리. 서버(Nest 등)에서 import할 때 사용한다.
 export type {
   DiffPart,
   DiffPartType,
@@ -17,7 +18,5 @@ export {
   stripDraft,
 } from "./extract";
 export { toPlainText } from "./toPlainText";
-export { WordDiff, type WordDiffProps, type WordDiffMode } from "./WordDiff";
-export { InlineEditor, type InlineEditorProps } from "./InlineEditor";
-export { domToTagged } from "./dom/domToTagged";
+export { serializeToTags, parseTagged } from "./tags";
 export { taggedToHtml } from "./dom/taggedToHtml";

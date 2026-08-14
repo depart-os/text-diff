@@ -24,3 +24,11 @@ describe("toPlainText", () => {
     );
   });
 });
+
+describe('draft(temp) 태그', () => {
+  it('draft 변경은 평문 추출에서 미적용으로 해소된다', () => {
+    expect(
+      toPlainText('안녕<tmp-del>하세요</tmp-del><tmp-ins>하십니까</tmp-ins>'),
+    ).toBe('안녕하세요')
+  })
+})

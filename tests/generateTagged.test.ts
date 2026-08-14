@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateTagged } from '../src/generateTagged'
+import { extractAfter, extractBefore, extractDraft, hasDraft } from '../src/extract'
 
 describe('generateTagged', () => {
   it('returns empty string when both inputs are empty', () => {
@@ -28,5 +29,32 @@ describe('generateTagged', () => {
     expect(generateTagged('안녕 세상', '안녕 친구야')).toBe(
       '안녕 <del>세상</del><ins>친구야</ins>',
     )
+  })
+})
+
+describe('draft 옵션', () => {
+  it('draft: true면 tmp 태그로 직렬화되고 after는 원본을 유지한다', () => {
+    const tagged = generateTagged('안녕하세요', '안녕하십니까', { draft: true })
+    expect(hasDraft(tagged)).toBe(true)
+    expect(extractBefore(tagged)).toBe('안녕하세요')
+    expect(extractAfter(tagged)).toBe('안녕하세요')
+    expect(extractDraft(tagged)).toBe('안녕하십니까')
+  })
+
+  it('draft: true는 서식 태그가 있어도 동작한다', () => {
+    const tagged = generateTagged(
+      '전달 <strong>반드시</strong> 오늘',
+      '전달 <strong>꼭</strong> 오늘',
+      { draft: true },
+    )
+    expect(hasDraft(tagged)).toBe(true)
+    expect(extractDraft(tagged)).toBe('전달 <strong>꼭</strong> 오늘')
+    expect(extractAfter(tagged)).toBe('전달 <strong>반드시</strong> 오늘')
+  })
+
+  it('옵션이 없으면 기존과 동일하게 ins/del로 직렬화한다', () => {
+    const tagged = generateTagged('안녕하세요', '안녕하십니까')
+    expect(hasDraft(tagged)).toBe(false)
+    expect(extractAfter(tagged)).toBe('안녕하십니까')
   })
 })

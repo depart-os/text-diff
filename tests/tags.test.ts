@@ -22,6 +22,18 @@ describe('serializeToTags', () => {
     )
   })
 
+  it('wraps draft add parts in <tmp-ins>', () => {
+    expect(serializeToTags([{ type: 'add', text: 'new', draft: true }])).toBe(
+      '<tmp-ins>new</tmp-ins>',
+    )
+  })
+
+  it('wraps draft del parts in <tmp-del>', () => {
+    expect(serializeToTags([{ type: 'del', text: 'old', draft: true }])).toBe(
+      '<tmp-del>old</tmp-del>',
+    )
+  })
+
   it('serializes a mixed sequence in order', () => {
     expect(
       serializeToTags([
@@ -61,6 +73,28 @@ describe('parseTagged', () => {
       { type: 'eq', text: '신호' },
       { type: 'del', text: '일 수 있어요' },
       { type: 'add', text: '입니다' },
+    ])
+  })
+
+  it('parses <tmp-ins> block as draft add', () => {
+    expect(parseTagged('<tmp-ins>new</tmp-ins>')).toEqual([
+      { type: 'add', text: 'new', draft: true },
+    ])
+  })
+
+  it('parses <tmp-del> block as draft del', () => {
+    expect(parseTagged('<tmp-del>old</tmp-del>')).toEqual([
+      { type: 'del', text: 'old', draft: true },
+    ])
+  })
+
+  it('parses mixed final and draft tags preserving order', () => {
+    expect(
+      parseTagged('신호<del>일 수</del><tmp-ins>있어요</tmp-ins>'),
+    ).toEqual([
+      { type: 'eq', text: '신호' },
+      { type: 'del', text: '일 수' },
+      { type: 'add', text: '있어요', draft: true },
     ])
   })
 

@@ -1,6 +1,6 @@
 {
   "name": "@depart-os/text-diff",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Inline-tag (1-round) text diff utilities for React (Korean/English) — used by depart-os proposal review flow.",
   "license": "MIT",
   "type": "module",
@@ -12,6 +12,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "require": "./dist/core.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "core": ["./dist/core.d.ts"]
     }
   },
   "files": [

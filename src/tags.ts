@@ -1,13 +1,15 @@
 import type { DiffPart } from './types'
 
-const TAG_RE = /<(del|ins)>([\s\S]*?)<\/\1>/g
+const TAG_RE = /<(del|ins|tmp-del|tmp-ins)>([\s\S]*?)<\/\1>/g
 
 export function serializeToTags(parts: DiffPart[]): string {
   let out = ''
   for (const p of parts) {
     if (p.type === 'eq') out += p.text
-    else if (p.type === 'add') out += `<ins>${p.text}</ins>`
-    else out += `<del>${p.text}</del>`
+    else if (p.type === 'add')
+      out += p.draft ? `<tmp-ins>${p.text}</tmp-ins>` : `<ins>${p.text}</ins>`
+    else
+      out += p.draft ? `<tmp-del>${p.text}</tmp-del>` : `<del>${p.text}</del>`
   }
   return out
 }
@@ -23,7 +25,9 @@ export function parseTagged(content: string): DiffPart[] {
     }
     const tag = match[1]
     const inner = match[2]
-    parts.push({ type: tag === 'ins' ? 'add' : 'del', text: inner })
+    const draft = tag.startsWith('tmp-')
+    const type = tag.endsWith('ins') ? ('add' as const) : ('del' as const)
+    parts.push(draft ? { type, text: inner, draft } : { type, text: inner })
     lastIndex = start + match[0].length
   }
   if (lastIndex < content.length) {

@@ -4,3 +4,10 @@ dist
 .DS_Store
 .env
 .env.*
+
+# AI tooling
+.claude/
+.omc/
+.superpowers/
+docs/superpowers/
+무제/

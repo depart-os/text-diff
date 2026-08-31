@@ -7,6 +7,7 @@ import {
 } from "react";
 import { domToTagged } from "./dom/domToTagged";
 import { taggedToHtml } from "./dom/taggedToHtml";
+import { normalizePlain } from "./normalizeText";
 import type { Mark } from "./types";
 
 export interface InlineEditorProps {
@@ -129,7 +130,8 @@ export function InlineEditor({
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const text = e.clipboardData.getData("text/plain");
+    // 외부 문서의 U+2028·U+2029·NBSP가 저장 데이터로 유입되지 않게 차단
+    const text = normalizePlain(e.clipboardData.getData("text/plain"));
     document.execCommand("insertText", false, text);
   };
 

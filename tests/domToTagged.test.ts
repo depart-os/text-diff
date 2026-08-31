@@ -48,4 +48,10 @@ describe("domToTagged", () => {
   it("records <p> blocks as newlines", () => {
     expect(domToTagged(el("<p>line1</p><p>line2</p>"))).toBe("line1\nline2");
   });
+  it("converts NBSP (contenteditable이 만든 특수 공백) to regular space", () => {
+    expect(domToTagged(el("a&nbsp;b"))).toBe("a b");
+    expect(domToTagged(el("<strong>a&nbsp;</strong>b"))).toBe(
+      "<strong>a </strong>b",
+    );
+  });
 });

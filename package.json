@@ -1,6 +1,6 @@
 {
   "name": "@depart-os/text-diff",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Inline-tag (1-round) text diff utilities for React (Korean/English) — used by depart-os proposal review flow.",
   "license": "MIT",
   "type": "module",

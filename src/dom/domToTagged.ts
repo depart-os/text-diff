@@ -17,7 +17,9 @@ function serializeChildren(node: Node): string {
   let out = "";
   node.childNodes.forEach((child) => {
     if (child.nodeType === Node.TEXT_NODE) {
-      out += escapeText(child.textContent ?? "");
+      // contenteditable은 연속·줄 끝 공백을 보존하려고 NBSP를 스스로 만든다 —
+      // 저장 문자열에는 일반 공백만 남긴다
+      out += escapeText((child.textContent ?? "").replace(/\u00a0/g, " "));
       return;
     }
     if (child.nodeType !== Node.ELEMENT_NODE) return;

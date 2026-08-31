@@ -28,6 +28,18 @@ describe("taggedToHtml", () => {
   });
 });
 
+describe("특수 줄바꿈 정규화", () => {
+  it("U+2028을 <br>로 복원한다", () => {
+    expect(taggedToHtml("하나\u2028둘")).toBe("하나<br>둘");
+  });
+  it("U+2028+LF 중복 쌍은 <br> 하나가 된다", () => {
+    expect(taggedToHtml("하나\u2028\n둘")).toBe("하나<br>둘");
+  });
+  it("NBSP를 일반 공백으로 바꾼다", () => {
+    expect(taggedToHtml("a\u00a0b")).toBe("a b");
+  });
+});
+
 describe('draft(temp) 태그', () => {
   it('draft 변경은 HTML 변환에서 미적용으로 해소된다', () => {
     expect(

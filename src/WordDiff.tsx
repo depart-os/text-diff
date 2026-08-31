@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { parseTaggedMarked, filterMarkedByMode } from "./renderParts";
 import { decodeEntities } from "./escape";
+import { normalizeTagged } from "./normalizeText";
 import { MARK_ORDER } from "./marks";
 import type { MarkedPart } from "./types";
 
@@ -54,7 +55,7 @@ function renderPart(p: MarkedPart, i: number): ReactNode {
 
 export function WordDiff({ content, mode, className }: WordDiffProps) {
   const parts = useMemo(
-    () => filterMarkedByMode(parseTaggedMarked(content), mode),
+    () => filterMarkedByMode(parseTaggedMarked(normalizeTagged(content)), mode),
     [content, mode],
   );
   const finalClass = className ? `${BASE_CLASS} ${className}` : BASE_CLASS;

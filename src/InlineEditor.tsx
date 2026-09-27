@@ -40,6 +40,15 @@ const DEFAULT_TOOLBAR_STYLE: CSSProperties = { display: "flex", gap: 4 };
 const DEFAULT_ACTIVE_STYLE: CSSProperties = { background: "#e4e4e7" };
 const NO_ACTIVE: Record<Mark, boolean> = { b: false, i: false, u: false };
 
+/** jsdom 등 queryCommandState 미구현 환경에서도 안전하게 조회 */
+function queryState(m: Mark): boolean {
+  try {
+    return document.queryCommandState(CMD[m]);
+  } catch {
+    return false;
+  }
+}
+
 export function InlineEditor({
   value,
   onChange,
@@ -54,6 +63,7 @@ export function InlineEditor({
 }: InlineEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const composingRef = useRef(false);
+  const applyingRef = useRef(false);
   const [active, setActive] = useState<Record<Mark, boolean>>(NO_ACTIVE);
 
   // 초기 마운트 및 외부 value 변경 시에만 DOM 동기화.
@@ -67,54 +77,80 @@ export function InlineEditor({
     if (node.innerHTML !== next) node.innerHTML = next;
   }, [value]);
 
-  // 커서/선택 위치의 서식 켜짐 상태를 툴바에 반영
+  // 커서/선택 위치의 서식 켜짐 상태를 툴바에 반영.
+  // 값이 그대로면 이전 객체를 그대로 반환해 리렌더를 막는다 —
+  // 드래그 중 selectionchange가 초당 수십 번 발생하므로 필수.
   const syncActive = useCallback(() => {
     const node = ref.current;
-    if (!node || document.activeElement !== node) {
-      setActive(NO_ACTIVE);
-      return;
-    }
-    try {
-      setActive({
-        b: document.queryCommandState(CMD.b),
-        i: document.queryCommandState(CMD.i),
-        u: document.queryCommandState(CMD.u),
-      });
-    } catch {
-      setActive(NO_ACTIVE);
-    }
+    const next =
+      !node || document.activeElement !== node
+        ? NO_ACTIVE
+        : { b: queryState("b"), i: queryState("i"), u: queryState("u") };
+
+    setActive((prev) =>
+      prev.b === next.b && prev.i === next.i && prev.u === next.u ? prev : next,
+    );
   }, []);
 
+  // selectionchange는 드래그 한 번에 수십~수백 번 발생한다.
+  // queryCommandState는 스타일 재계산을 유발하므로 프레임당 1회로 합친다.
   useEffect(() => {
-    document.addEventListener("selectionchange", syncActive);
-    return () => document.removeEventListener("selectionchange", syncActive);
+    let scheduled = 0;
+
+    const onSelectionChange = () => {
+      if (scheduled) return;
+      scheduled = requestAnimationFrame(() => {
+        scheduled = 0;
+        syncActive();
+      });
+    };
+
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", onSelectionChange);
+      if (scheduled) cancelAnimationFrame(scheduled);
+    };
   }, [syncActive]);
 
-  const apply = (m: Mark) => {
-    try {
-      document.execCommand("styleWithCSS", false, "false");
-    } catch {
-      /* noop */
-    }
-    const sel = window.getSelection();
-    const hadRange = !!sel && !sel.isCollapsed;
-    document.execCommand(CMD[m]);
-    // 영역 선택에 서식을 적용한 경우: 커서를 영역 끝으로 옮기고 서식을 꺼서
-    // 이어지는 타이핑이 서식 없이 입력되게 한다. (커서만 둔 토글은 기존 유지)
-    if (hadRange && sel) {
-      sel.collapseToEnd();
-      if (document.queryCommandState(CMD[m])) {
-        document.execCommand(CMD[m]);
-      }
-    }
+  const emitChange = useCallback(() => {
     if (ref.current) onChange(domToTagged(ref.current));
+  }, [onChange]);
+
+  const apply = (m: Mark) => {
+    // execCommand는 네이티브 input 이벤트를 발생시켜 handleInput을 중복 호출한다.
+    // 영역 선택 시 execCommand가 두 번 실행되므로 onChange가 최대 3번 나갔다.
+    // 적용 중에는 handleInput을 막고, 끝난 뒤 최종 DOM 상태로 한 번만 보낸다.
+    applyingRef.current = true;
+    try {
+      try {
+        document.execCommand("styleWithCSS", false, "false");
+      } catch {
+        /* noop */
+      }
+      const sel = window.getSelection();
+      const hadRange = !!sel && !sel.isCollapsed;
+      document.execCommand(CMD[m]);
+      // 영역 선택에 서식을 적용한 경우: 커서를 영역 끝으로 옮기고 서식을 꺼서
+      // 이어지는 타이핑이 서식 없이 입력되게 한다. (커서만 둔 토글은 기존 유지)
+      if (hadRange && sel) {
+        sel.collapseToEnd();
+        if (queryState(m)) {
+          document.execCommand(CMD[m]);
+        }
+      }
+    } finally {
+      applyingRef.current = false;
+    }
+    emitChange();
     syncActive();
   };
 
   const handleInput = () => {
     // 한글 등 IME 조합 중에는 onChange를 보류 — 조합 완료 시 반영
     if (composingRef.current) return;
-    if (ref.current) onChange(domToTagged(ref.current));
+    // apply()가 끝난 뒤 한 번만 내보낸다
+    if (applyingRef.current) return;
+    emitChange();
     syncActive();
   };
 
@@ -124,7 +160,7 @@ export function InlineEditor({
 
   const handleCompositionEnd = () => {
     composingRef.current = false;
-    if (ref.current) onChange(domToTagged(ref.current));
+    emitChange();
     syncActive();
   };
 
